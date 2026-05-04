@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Roleta Quebra-Gelo</title>
+    <!-- Tailwind CSS via CDN para os estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Animação personalizada para a caixa de resultado */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(1rem);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in-up {
+        animation: fadeInUp 0.5s ease-out forwards;
+      }
+
+      /* Garantir que a transição da roleta é suave */
+      #wheel {
+        transition: transform 4s cubic-bezier(0.15, 0.85, 0.15, 1);
+      }
+    </style>
+  </head>
+  <body
+    class="min-h-screen bg-slate-50 flex flex-col items-center py-12 px-4 font-sans text-slate-800"
+  >
+    <!-- Cabeçalho -->
+    <div class="text-center mb-10">
+      <h1
+        class="text-4xl font-extrabold text-slate-800 mb-3 flex items-center justify-center gap-3"
+      >
+        <!-- Ícone MessageCircleHeart em SVG -->
+        <svg
+          xmlns="http://www.apache.org/2000/svg"
+          width="40"
+          height="40"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="text-rose-500"
+        >
+          <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+          <path
+            d="M15.8 9.2a2.5 2.5 0 0 0-3.5 0l-.3.4-.3-.4a2.5 2.5 0 1 0-3.6 3.5l3.9 3.9 3.9-3.9a2.5 2.5 0 0 0 0-3.5z"
+          />
+        </svg>
+        Roleta Quebra-Gelo
+      </h1>
+      <p class="text-slate-500 text-lg">
+        Gira a roleta e responde à pergunta que calhar!
+      </p>
+    </div>
+
+    <div style="display: flex; gap: 32px">
+      <!-- Área da Roleta -->
+      <div class="relative mb-12 select-none flex flex-col items-center">
+        <!-- Ponteiro (Triângulo) -->
+        <div class="absolute -top-6 z-20 drop-shadow-md">
+          <!-- Ícone ArrowDown em SVG -->
+          <svg
+            xmlns="http://www.apache.org/2000/svg"
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="text-slate-800"
+          >
+            <path d="M12 5v14" />
+            <path d="m19 12-7 7-7-7" />
+          </svg>
+        </div>
+
+        <!-- Círculo da Roleta -->
+        <div
+          id="wheel"
+          class="relative w-72 h-72 sm:w-96 sm:h-96 rounded-full shadow-2xl overflow-hidden border-8 border-white"
+        >
+          <!-- Os números e o centro serão injetados via JavaScript -->
+        </div>
+
+        <!-- Botão Principal de Girar -->
+        <button
+          id="spinBtn"
+          class="mt-10 px-8 py-4 rounded-full text-xl font-bold text-white shadow-lg transition-all duration-300 flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 hover:scale-105 hover:shadow-indigo-300/50 hover:shadow-xl active:scale-95"
+        >
+          <!-- Ícone RotateCw em SVG -->
+          <svg
+            id="spinIcon"
+            xmlns="http://www.apache.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+          </svg>
+          <span id="btnText">Girar Roleta!</span>
+        </button>
+      </div>
+
+      <!-- Área do Resultado -->
+      <div class="w-full max-w-2xl min-h-[160px] flex justify-center">
+        <!-- Placeholder (antes de rodar) -->
+        <div
+          id="placeholderBox"
+          class="bg-slate-100 rounded-2xl p-8 border-2 border-dashed border-slate-300 w-full flex items-center justify-center text-slate-400 text-lg transition-opacity duration-300 text-center"
+        >
+          A pergunta aparecerá aqui quando a roleta parar...
+        </div>
+
+        <!-- Cartão da Pergunta (escondido por defeito) -->
+        <div
+          id="resultBox"
+          class="hidden bg-white rounded-2xl shadow-xl p-8 border-l-8 border-indigo-500 animate-fade-in-up w-full relative"
+        >
+          <div
+            id="resultNumber"
+            class="absolute -top-4 -left-4 w-10 h-10 bg-indigo-500 text-white rounded-full flex items-center justify-center font-bold text-xl shadow-md border-4 border-white"
+          >
+            1
+          </div>
+          <h3
+            class="text-sm font-semibold text-indigo-500 uppercase tracking-wider mb-2"
+          >
+            A tua pergunta:
+          </h3>
+          <p
+            id="resultText"
+            class="text-2xl sm:text-3xl font-medium text-slate-800 leading-snug"
+          >
+            "Texto da pergunta"
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Dados da Roleta
+      const perguntas = [
+        "O que é algo que quase todos gostam, mas tu odeias?",
+        "Qual foi a última moda da internet que simplesmente não entendeste?",
+        "Se fosses um sabor de gelado, qual serias e porquê?",
+        "Qual é o teu talento mais inútil (mas impressionante)?",
+        "Preferes trabalhar/estudar em silêncio absoluto ou com música?",
+        "Se pudesses viajar para qualquer lugar amanhã, com tudo pago, para onde irias?",
+        "És uma pessoa matinal (acordas com energia) ou uma coruja noturna?",
+        "Que objeto da tua casa levarias obrigatoriamente se houvesse uma emergência?",
+      ];
+
+      const cores = [
+        "#EF4444", // Vermelho
+        "#F59E0B", // Âmbar
+        "#10B981", // Esmeralda
+        "#3B82F6", // Azul
+        "#8B5CF6", // Violeta
+        "#EC4899", // Rosa
+        "#14B8A6", // Teal
+        "#F97316", // Laranja
+      ];
+
+      // Variáveis de Estado
+      let rotacaoAtual = 0;
+      let aGirar = false;
+
+      // Elementos DOM
+      const wheel = document.getElementById("wheel");
+      const spinBtn = document.getElementById("spinBtn");
+      const spinIcon = document.getElementById("spinIcon");
+      const btnText = document.getElementById("btnText");
+      const placeholderBox = document.getElementById("placeholderBox");
+      const resultBox = document.getElementById("resultBox");
+      const resultNumber = document.getElementById("resultNumber");
+      const resultText = document.getElementById("resultText");
+
+      // Inicializar o visual da Roleta
+      function initRoleta() {
+        // 1. Criar o fundo com fatias coloridas
+        const gradientFatias = cores
+          .map((cor, index) => {
+            const anguloInicial = index * 45;
+            const anguloFinal = (index + 1) * 45;
+            return `${cor} ${anguloInicial}deg ${anguloFinal}deg`;
+          })
+          .join(", ");
+        wheel.style.background = `conic-gradient(${gradientFatias})`;
+
+        // 2. Adicionar os números e rodá-los para a posição correta
+        perguntas.forEach((_, index) => {
+          const numDiv = document.createElement("div");
+          numDiv.className =
+            "absolute inset-0 flex justify-center pt-4 sm:pt-8";
+          numDiv.style.transform = `rotate(${index * 45 + 22.5}deg)`;
+
+          const span = document.createElement("span");
+          span.className =
+            "text-white font-bold text-2xl sm:text-3xl drop-shadow-md";
+          span.innerText = index + 1;
+
+          numDiv.appendChild(span);
+          wheel.appendChild(numDiv);
+        });
+
+        // 3. Adicionar o círculo branco central
+        const centerCircle = document.createElement("div");
+        centerCircle.className =
+          "absolute inset-0 m-auto w-24 h-24 sm:w-32 sm:h-32 bg-white rounded-full shadow-inner flex items-center justify-center border-4 border-slate-100";
+        centerCircle.innerHTML = `
+                <div class="w-full h-full rounded-full flex items-center justify-center text-slate-400">
+                    <div class="w-4 h-4 rounded-full bg-slate-300"></div>
+                </div>
+            `;
+        wheel.appendChild(centerCircle);
+      }
+
+      // Função de Girar
+      function girarRoleta() {
+        if (aGirar) return;
+        aGirar = true;
+
+        // Atualizar UI do Botão (Desabilitado)
+        spinBtn.classList.remove(
+          "bg-indigo-600",
+          "hover:bg-indigo-700",
+          "hover:scale-105",
+          "hover:shadow-indigo-300/50",
+          "hover:shadow-xl",
+          "active:scale-95",
+        );
+        spinBtn.classList.add("bg-slate-400", "cursor-not-allowed", "scale-95");
+        spinIcon.classList.add("animate-spin");
+        btnText.innerText = "A girar...";
+
+        // Esconder resultado anterior
+        resultBox.classList.add("hidden");
+        // Remover a classe de animação para poder reiniciar depois
+        resultBox.classList.remove("animate-fade-in-up");
+        placeholderBox.classList.remove("hidden");
+
+        // Calcular nova rotação
+        const voltasExtras = 1800; // Pelo menos 5 voltas completas
+        const anguloAleatorio = Math.floor(Math.random() * 360);
+        rotacaoAtual += voltasExtras + anguloAleatorio;
+
+        // Aplicar rotação na UI
+        wheel.style.transform = `rotate(${rotacaoAtual}deg)`;
+
+        // Esperar o fim da animação (4000ms = 4s)
+        setTimeout(() => {
+          aGirar = false;
+
+          // Restaurar UI do Botão
+          spinBtn.classList.add(
+            "bg-indigo-600",
+            "hover:bg-indigo-700",
+            "hover:scale-105",
+            "hover:shadow-indigo-300/50",
+            "hover:shadow-xl",
+            "active:scale-95",
+          );
+          spinBtn.classList.remove(
+            "bg-slate-400",
+            "cursor-not-allowed",
+            "scale-95",
+          );
+          spinIcon.classList.remove("animate-spin");
+          btnText.innerText = "Girar Roleta!";
+
+          // Calcular qual fatia ganhou
+          const rotacaoNormalizada = rotacaoAtual % 360;
+          const offset = (360 - rotacaoNormalizada) % 360;
+          const indiceVencedor = Math.floor(offset / 45);
+
+          // Mostrar o resultado
+          resultNumber.innerText = indiceVencedor + 1;
+          resultText.innerText = `"${perguntas[indiceVencedor]}"`;
+
+          placeholderBox.classList.add("hidden");
+          resultBox.classList.remove("hidden");
+
+          // Forçar o reflow para reiniciar a animação CSS (truque do DOM)
+          void resultBox.offsetWidth;
+          resultBox.classList.add("animate-fade-in-up");
+        }, 4000);
+      }
+
+      // Adicionar evento de clique ao botão
+      spinBtn.addEventListener("click", girarRoleta);
+
+      // Inicializar tudo ao carregar a página
+      initRoleta();
+    </script>
+  </body>
+</html>
